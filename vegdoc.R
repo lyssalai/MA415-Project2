@@ -11,16 +11,16 @@ cnames1 <- colnames(veg1)
 #Try
 n_distinct(veg1[,1])
 n_distinct(veg1[,2])
-unique(veg.1[,2])
+unique(veg1[,2])
 
 #Now get the count for each column
-c <- apply(veg.1, 2, n_distinct)
+c <- apply(veg1, 2, n_distinct)
 d <- names(c[c==1])
 e <- names(c[c>1])
 
 veg2 <- select(veg1, e)
 
-cnames2 <- colnames(veg.2)
+cnames2 <- colnames(veg2)
 
 apply(veg2, 2, n_distinct)
 
