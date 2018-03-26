@@ -1,0 +1,115 @@
+Vegetables and Toxicity
+========================================================
+author: Lyssa Lai
+date: March 20, 2018
+autosize: true
+
+Toxicity Levels in Broccoli
+========================================================
+
+<br>
+<br>
+<br>
+<br>
+The grey bars shows the value of toxicity of various insecticides (listed on the left) used to farm broccoli, which is measured in pounds (lbs).
+
+***
+
+```{r, echo=FALSE}
+library(tidyverse)
+library(readxl)
+library(stringr)
+library(ggplot2)
+library(dplyr)
+
+ToxData <- read.csv("chemical_tox.csv")
+
+GenChem <- read.csv("General Chem Data.csv")
+
+GenChem<-as.tibble(GenChem)
+
+GenChem$Value <- as.numeric(GenChem$Value)
+
+#get the data with toxicity info in it
+
+ToxData <- as.tibble(ToxData)
+
+ToxData$X <- as.integer(ToxData$X)
+
+ToxData$Name <- as.character(ToxData$Name)
+
+ToxData$ID <- as.character(ToxData$ID)
+
+ToxData <- ToxData %>% select(-ID)
+
+Bro <- GenChem %>% filter(type == "RESTRICTED USE CHEMICAL", Commodity == "BROCCOLI", Unit == " MEASURED IN LB")
+
+Bro$Value <- as.numeric(Bro$Value)
+
+Bro <- left_join(Bro, ToxData, by="Name")
+
+Bro <- rename(Bro, Real=Value, LD50=X)
+
+Bro <- Bro %>% gather(Real, LD50, key="Toxicity", value="value")
+
+ggplot(Bro, aes(x= Name, y=value )) + 
+  geom_bar(stat="identity", position = "dodge") + 
+  labs(y = "Values(lbs) ", x = "Chemical") +
+  coord_flip()+
+  labs(title="Toxicity Measurements in Brocoli")
+```
+
+Toxicity Levels in Cauliflower
+========================================================
+
+<br>
+<br>
+<br>
+<br>
+The grey bars shows the value of toxicity of various insecticides (listed on the left) used to farm cauliflower, which is measured in pounds (lbs).
+
+***
+
+```{r, echo=FALSE}
+library(tidyverse)
+library(readxl)
+library(stringr)
+library(ggplot2)
+library(dplyr)
+
+ToxData <- read.csv("chemical_tox.csv")
+
+GenChem <- read.csv("General Chem Data.csv")
+
+GenChem<-as.tibble(GenChem)
+
+GenChem$Value <- as.numeric(GenChem$Value)
+
+#get the data with toxicity info in it
+
+ToxData <- as.tibble(ToxData)
+
+ToxData$X <- as.integer(ToxData$X)
+
+ToxData$Name <- as.character(ToxData$Name)
+
+ToxData$ID <- as.character(ToxData$ID)
+
+ToxData <- ToxData %>% select(-ID)
+
+Cau <- GenChem %>% filter(type == "RESTRICTED USE CHEMICAL", Commodity == "CAULIFLOWER", Unit == " MEASURED IN LB")
+
+Cau$Value <- as.numeric(Cau$Value)
+
+Cau <- left_join(Cau,ToxData,by="Name")
+
+Cau <- rename(Cau,Real=Value,LD50=X)
+
+Cau <- Cau %>% gather(Real , LD50 , key="Toxicity", value="value")
+
+ggplot(Cau, aes(x= Name, y=value)) + 
+  geom_bar(stat="identity", position = "dodge") + 
+  labs(y = "Values(lbs) ", x = "Chemical") +
+  coord_flip()+
+  labs(title="Toxicity Measurements in Cauliflower")
+```

@@ -92,7 +92,7 @@ Bro <- rename(Bro,Real=Value,LD50=X)
 Bro <- Bro %>% gather(Real, LD50 , key="Toxicity", value="Value")
 
 ggplot(Bro, aes(x= Name, y=Value )) + 
-  geom_bar(stat="identity", position = "dodge", aes(fill=Toxicity)) + 
+  geom_bar(stat="identity", position = "dodge") + 
   labs(y = "Values(lb) ", x = "Chemical") +
   coord_flip()+
   labs(title="Toxicity Measurements in Brocoli")
@@ -106,7 +106,7 @@ Cau <- rename(Cau, Real = Value, LD50 = X)
 Cau <- Cau %>% gather(Real, LD50, key = 'Toxicity', value = 'Value')
 
 ggplot(Cau, aes(x= Name, y=Value )) + 
-  geom_bar(stat="identity", position = "dodge", aes(fill=Toxicity)) + 
+  geom_bar(stat="identity", position = "dodge") + 
   labs(y = "Values(lb) ",x = "Chemical") +
   coord_flip()+
   labs(title="Toxicity Measurements in Cauliflower")
