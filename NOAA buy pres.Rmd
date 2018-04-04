@@ -1,0 +1,376 @@
+---
+title: "Air and Sea Temperature in the Bering Sea from 1987 to 2017"
+author: "Nicole Mis, Alyssa Lai"
+date: "March 10, 2018"
+output: ioslides_presentation
+---
+
+
+## Outline
+
+- Introduction
+- Time Series
+- Air Temperature Visualization
+- Water Temperature Visualization
+- Statistical Tests
+- Conclusion
+
+## Introduction 
+
+In this project, we analyze air and water temperatures at noon every day in the Bering Sea from the years 1987 to 2017. We primarily obtained our data from buoy 46035. However, for the years 2011 through 2013, this buoy had missing data for air and water temperatures and therefore, we had to use data collected from the nearby station 9461380 located on Adak Island.
+
+The below analysis only contains data at noon for this buoy during these years, thus restricting this analysis to these very specific parameters.We also accounted for missing values by labeling these observations as "NA" and then eliminating them from the data set. 
+
+Inconsistencies also exist during each year. For instance, for some years, there is no data collected at noon for every day and therefore, we have gathered the data from these years that do exist, even if it is not complete for that year.
+
+
+## Time Series
+The graph below displays every data point collected for the years 1988 to 2017 at the specific buoy locations in the Bering Sea. 
+
+```{r, echo=FALSE, results='hide',message=FALSE}
+library(tidyverse)
+library(stringr)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(lubridate)
+library(dplyr)
+
+url1 <- "http://www.ndbc.noaa.gov/view_text_file.php?filename=46035h"
+url2 <- ".txt.gz&dir=data/historical/stdmet/"
+
+years <- c(1988:2011)
+
+urls <- str_c(url1, years, url2, sep = "")
+
+years1 <- c(2012:2013)
+
+url3 <- "http://www.ndbc.noaa.gov/view_text_file.php?filename=adka2h"
+url4 <- ".txt.gz&dir=data/historical/stdmet/"
+
+urls5 <- c(urls, str_c(url3, years1, url4, sep = ""))
+
+years2 <- c(2014:2017)
+
+urls6 <- c(urls5, str_c(url1, years2, url2, sep = ""))
+
+years3 <- c(1988:2017)
+
+filenames <- str_c("mr", years3, sep = "")
+
+
+N <- length(urls6)
+
+
+for (i in 1:N){
+  suppressMessages(
+    assign(filenames[i], read_table(urls6[i], col_names = TRUE))
+  )
+
+  file <- get(filenames[i])
+
+  colnames(file)[1] <- "YYYY"
+  
+  if(as.numeric(file[2,1]) < 1999) {
+    file[1] <- paste("19", toString(file[1,1]), sep="") 
+    file <- file %>% select(YYYY, MM, DD, hh, ATMP, WTMP)
+    file <- subset(file, col_names=TRUE, hh == 12)
+  }
+  else {
+    file <- file%>%select(YYYY, MM, DD, hh, ATMP, WTMP)
+    file <- subset(file, col_names=TRUE, hh == 12)
+  }
+  if(i == 1){
+    MR <- file
+  }
+  
+  else{
+    MR <- rbind.data.frame(MR, file)
+  }
+  }
+
+
+```
+
+
+```{r, echo=FALSE, results='hide',message=FALSE}
+
+# Change columns from ch to integer type
+
+MR$YYYY=as.numeric(MR$YYYY)
+MR$ATMP=as.numeric(MR$ATMP)
+MR$WTMP=as.numeric(MR$WTMP)
+MR$DD=as.numeric(MR$DD)
+MR$MM=as.numeric(MR$MM)
+
+# delete missing observations
+
+MR[MR==999 | MR==99] <- NA
+MR_noon_clean <- na.omit(MR)
+
+MR_noon_clean$Date <-strptime(with(MR_noon_clean, paste(YYYY, MM, DD, hh, sep="-")), format="%Y-%m-%d-%H")
+
+```
+
+
+
+```{r, echo=FALSE, results='hide',message=FALSE, fig.align='center', fig.width=8, fig.height=4}
+ggplot(MR_noon_clean, aes(x = Date)) + 
+  geom_line(mapping = aes(x = Date, y = ATMP, color = "Air Temperature")) +
+  geom_line(mapping = aes(x = Date, y = WTMP, color = "Water Temperature")) +
+  xlab("Time") +
+  scale_y_continuous("Temperature (C)") + 
+  labs(title="Daily Air and Sea Temperatures at Noon for 1988 to 2017") 
+  
+           
+```
+
+
+## Time Series of Average Temperatures
+Below we include another time series graph of average air and water temperatures. This graph shows that average temperatures have increased during these years. 
+
+```{r, echo=FALSE, results='hide',message=FALSE, fig.align='center', fig.width=8, fig.height=4}
+
+# Get only average air and water temperatures
+
+air_temp <- MR_noon_clean %>% select(YYYY, ATMP)
+
+wat_temp <- MR_noon_clean%>%select(YYYY, WTMP)
+
+avg_AT <- air_temp%>%group_by(YYYY)%>%summarise(sum(ATMP)/length(ATMP))
+colnames(avg_AT) <- c("year","avg_AT")
+new_avg_AT <- avg_AT%>%select(-c(year))
+
+avg_ST <- wat_temp%>%group_by(YYYY)%>%summarise(sum(WTMP)/length(WTMP))
+colnames(avg_ST) <- c("year","avg_ST")
+
+avg_clean <- cbind(avg_ST, new_avg_AT)
+
+ggplot(avg_clean, aes(x = year)) + 
+  geom_line(aes(y = avg_AT, color ="Air Temperature")) + 
+  geom_line(aes(y = avg_ST, color = "Water Temperature")) +
+  scale_colour_manual("", 
+                      breaks = c("Air Temperature", "Water Temperature"),
+                      values = c("red", "blue"))+
+  xlab("Year") +
+  scale_y_continuous("Temperature (deg C)", limits = c(0,12)) + 
+  scale_x_continuous(breaks = seq(1988, 2017, 2)) +
+  labs(title="Average Air and Sea Temperatures Recorded at Noon from 1988 to 2017")
+  
+```
+
+
+
+## Air Temperature ~ Bar Graph
+The graphs of air temperature demonstrate that over the past 30 years, air temperatures have increased. There are some years where the temperature was much lower but overall, there is an upward trend in air temperatures.
+
+```{r, echo=FALSE, results='hide',message=FALSE, fig.align='center', fig.width=6, fig.height=4}
+
+g <- ggplot(avg_AT,aes(year,avg_AT,fill=year))+geom_col()+labs(y="average air temperature (deg C)", title="Average Air Temperature by Year")+ theme(plot.title = element_text(hjust = 0.5)) + scale_x_continuous(breaks = seq(1988, 2017, 2))
+g
+```
+
+## Air Temperature ~ Box Plot
+
+```{r, echo=FALSE, results='hide',message=FALSE, fig.align='center'}
+ggplot(air_temp)+geom_boxplot(aes(YYYY, ATMP, group= YYYY))+labs(y="Air Temperature (deg C)", title="Air Temperature by Year", x= "Year")+theme(plot.title = element_text(hjust = 0.5)) +
+scale_x_continuous(breaks = seq(1988, 2017, 2))
+```
+
+## Water Temperature ~ Bar Graph
+The graphs for water temperature similary show an upward trend in water temperatures over the past 30 years in the Bering Sea.
+
+```{r, echo=FALSE, results='hide',message=FALSE, fig.align='center', fig.width=7, fig.height=4}
+
+ggplot(avg_ST,aes(year,avg_ST,fill=year))+geom_col()+labs(y="Average Sea Temperature (deg C)",title="Average Sea Temperature by Year")+ theme(plot.title = element_text(hjust = 0.5)) + scale_x_continuous(breaks = seq(1988, 2017, 2))
+
+```
+
+
+## Water Temperature ~ Boxplot
+
+```{r, echo=FALSE, results='hide',message=FALSE, fig.align='center'}
+ggplot(wat_temp)+geom_boxplot(aes(YYYY, WTMP,group= YYYY))+labs(y="Sea Temperature (deg C)", title="Sea Temperature by Year", x="Year")+theme(plot.title = element_text(hjust = 0.5)) +
+scale_x_continuous(breaks = seq(1988, 2017, 2))
+
+```
+
+## Relationship Between Air and Water Temperatures
+The graph below shows a positive relationship between air and water temperatures. As the air temperature increases, the water temperature also increases.
+
+```{r, echo=FALSE, results='hide',message=FALSE, fig.align='center', fig.width=6, fig.height=3.5}
+ggplot(MR_noon_clean, aes(x = ATMP)) + 
+  geom_point(mapping = aes(x = ATMP, y = WTMP), color="blue") +
+  xlab("Air Temperature") +
+  scale_y_continuous("Water Temperature") + 
+  labs(title="Relationship Between Air and Sea Temperatures") 
+
+```
+
+## Statistical Tests: Air Temp at Noon 1988 vs. 2017
+The below statistical test compares air temperatures at noon in 1988 vs 2017. Since the p-value = 0 < 0.5, we reject the null hypothesis that daily air temperatures recorded at noon in 1988 and 2017 have the same mean.
+```{r, echo=FALSE, message=FALSE, comment=NA}
+
+clean_air_1988 <- subset(MR_noon_clean, YYYY==1988)
+clean_air_1988 <- clean_air_1988%>% select(-c(YYYY, MM, DD, hh, WTMP, Date))
+clean_air_1988 <- as.data.frame(clean_air_1988)
+clean_air_2017 <- subset(MR_noon_clean, YYYY==2017)
+clean_air_2017 <- clean_air_2017%>% select(-c(YYYY, MM, DD, hh, WTMP, Date))
+clean_air_2017 <- as.data.frame(clean_air_2017)
+
+
+
+t.test(clean_air_1988, clean_air_2017)
+
+
+```
+
+## Water Temperature at Noon 1988 vs. 2017
+The below statistical test compares water temperatures at noon in 1988 vs 2017. Since the p-value = 0 < 0.5, we reject the null hypothesis that daily water temperatures recorded at noon in 1988 and 2017 have the same mean.
+```{r, echo=FALSE, message=FALSE, comment=NA}
+clean_wat_1988 <- subset(MR_noon_clean, YYYY==1988)
+clean_wat_1988 <- clean_wat_1988%>% select(-c(YYYY, MM, DD, hh, WTMP, Date))
+clean_wat_1988 <- as.data.frame(clean_wat_1988)
+clean_wat_2017 <- subset(MR_noon_clean, YYYY==2017)
+clean_wat_2017 <- clean_wat_2017%>% select(-c(YYYY, MM, DD, hh, WTMP, Date))
+clean_wat_2017 <- as.data.frame(clean_wat_2017)
+
+t.test(clean_wat_1988, clean_wat_2017)
+
+```
+
+
+
+```{r, echo=FALSE, results='hide',message=FALSE}
+
+url1 <- "http://www.ndbc.noaa.gov/view_text_file.php?filename=46035h"
+url2 <- ".txt.gz&dir=data/historical/stdmet/"
+
+years <- c(1988:2011)
+
+urls <- str_c(url1, years, url2, sep = "")
+
+years1 <- c(2012:2013)
+
+url3 <- "http://www.ndbc.noaa.gov/view_text_file.php?filename=adka2h"
+url4 <- ".txt.gz&dir=data/historical/stdmet/"
+
+urls5 <- c(urls, str_c(url3, years1, url4, sep = ""))
+
+years2 <- c(2014:2017)
+
+urls6 <- c(urls5, str_c(url1, years2, url2, sep = ""))
+
+years3 <- c(1988:2017)
+
+filenames <- str_c("mr", years3, sep = "")
+
+
+N <- length(urls6)
+
+
+for (i in 1:N){
+  suppressMessages(
+    assign(filenames[i], read_table(urls6[i], col_names = TRUE))
+  )
+
+  file <- get(filenames[i])
+
+  colnames(file)[1] <- "YYYY"
+  
+  if(as.numeric(file[2,1]) < 1999) {
+    file[1] <- paste("19", toString(file[1,1]), sep="") 
+    file <- file %>% select(YYYY, hh, ATMP, WTMP)
+    file <- subset(file, col_names=TRUE)
+  }
+  else {
+    file <- file%>%select(YYYY, hh, ATMP, WTMP)
+    file <- subset(file, col_names=TRUE)
+  }
+  if(i == 1){
+    MR_all <- file
+  }
+  
+  else{
+    MR_all <- rbind.data.frame(MR_all, file)
+  }
+  }
+```
+```{r}
+
+MR_all$ATMP=as.numeric(MR_all$ATMP)
+MR_all$WTMP=as.numeric(MR_all$WTMP)
+
+MR_all[MR_all==999 | MR_all==99] <- NA
+MR_all[MR_all==999 | MR_all==99] <- NA
+MR_cleaner <- na.omit(MR_all)
+
+
+
+
+```
+
+## Air Temperatures at Noon vs. 6 p.m.
+The below statistical test compares air temperatures at noon and at 6 p.m. for all years. Since the p-value = 0.687 > 0.5, we fail to reject the null hypothesis that daily air temperatures recorded at noon and at 6.p.m. have the same mean.
+
+```{r, echo=FALSE, message=FALSE, comment=NA}
+daily <- MR_cleaner %>% select(YYYY, hh, ATMP, WTMP)  
+noon_daily <- subset(daily, col_names=TRUE, hh==12)
+
+noon_ATMP <- noon_daily%>% select(-c(YYYY, hh, WTMP))
+
+noon_WTMP <- noon_daily%>% select(-c(YYYY, hh, ATMP))
+
+daily_6pm <- subset(daily, hh==18)
+
+ATMP_6pm <- daily_6pm%>% select(-c(YYYY, hh, WTMP))
+
+WTMP_6pm <- daily_6pm%>% select(-c(YYYY, hh, ATMP))
+
+t.test(as.data.frame(noon_ATMP), as.data.frame(ATMP_6pm))
+
+```
+
+## Water Temperatures at Noon vs. 6 p.m.
+The below statistical test compares water temperatures at noon and at 6 p.m. for all years. Since the p-value = 0.567 > 0.5, we fail to reject the null hypothesis that daily water temperatures recorded at noon and at 6.p.m. have the same mean.
+```{r, echo=FALSE, message=FALSE, comment=NA}
+
+t.test(as.data.frame(noon_WTMP), as.data.frame(WTMP_6pm))
+
+
+```
+
+## Air Temperatures in 1988 vs. 2017
+The below statistical test compares air temperatures in 1988 and 2017 at all times during the day. Since the p-value = 0 < 0.5, we reject the null hypothesis that daily air temperatures in 1988 and 2017 have the same mean.
+```{r, echo=FALSE, message=FALSE, comment=NA}
+
+daily_1988 <- subset(daily, col_names=TRUE, YYYY=="1988")
+ATMP_1988 <- daily_1988%>% select(-c(YYYY, hh, WTMP))
+WTMP_1988 <- daily_1988%>% select(-c(YYYY, hh, ATMP))
+
+
+daily_2017 <- subset(daily, col_names=TRUE, YYYY=="2017")
+ATMP_2017 <- daily_2017%>% select(-c(YYYY, hh, WTMP))
+WTMP_2017 <- daily_2017%>% select(-c(YYYY, hh, ATMP))
+
+t.test(as.data.frame(ATMP_1988), as.data.frame(ATMP_2017))
+
+```
+
+## Water Temperatures in 1988 vs. 2017
+The below statistical test compares water temperatures in 1988 and 2017 at all times during the day. Since the p-value = 0 < 0.5, we reject the null hypothesis that daily water temperatures in 1988 and 2017 have the same mean.
+```{r, echo=FALSE, message=FALSE, comment=NA}
+
+t.test(as.data.frame(WTMP_1988), as.data.frame(WTMP_2017))
+
+```
+
+
+## Conclusion
+
+-The previous graphs and statistical tests all indicate that air and water temperatures have changed over the past 30 years in the Bering Sea
+
+-The statistical tests demonstrate that the time of day temperatures were recorded at did not matter because temperatures were very similar at different times during the day and in the aggregate, temperatures changed over the past thirty years.
+
+-Air and Water Temperatures have a positive relationship
